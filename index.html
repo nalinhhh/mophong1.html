@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xưởng Cơ khí số – 3D · AR · VR</title>
+<style>
+:root{
+  --navy:#0a1428; --navy2:#132038; --navy3:#1c2d47;
+  --cyan:#22d3ee; --cyan2:#0e7490;
+  --text:#e2e8f0; --muted:#94a3b8;
+  --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:var(--navy);color:var(--text);display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;cursor:pointer;color:inherit}
+
+/* HTTPS warning */
+.https-warning{background:rgba(245,158,11,.15);border-bottom:1px solid rgba(245,158,11,.35);
+  color:var(--warn);padding:8px 16px;font-size:.85rem;text-align:center;z-index:20}
+.https-warning.hidden{display:none}
+.https-warning code{background:rgba(0,0,0,.3);padding:1px 6px;border-radius:4px}
+
+/* Header */
+.app-header{display:flex;align-items:center;gap:12px;padding:10px 16px;
+  background:var(--navy2);border-bottom:1px solid var(--navy3);z-index:10}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.05rem;white-space:nowrap}
+.logo .mark{width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan2));display:grid;place-items:center;
+  color:var(--navy);font-weight:900}
+.main-nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.main-nav button{padding:8px 14px;background:transparent;border:none;border-radius:8px;
+  color:var(--muted);font-weight:600}
+.main-nav button.active{background:var(--navy3);color:var(--cyan)}
+.device-status{font-size:.8rem;padding:4px 10px;border-radius:99px;
+  background:var(--navy3);color:var(--muted);white-space:nowrap}
+.device-status.ok{color:var(--ok)} .device-status.warn{color:var(--warn)}
+#btnHelp{padding:6px 12px;border-radius:8px;background:var(--navy3);border:1px solid var(--navy3);
+  color:var(--text);font-size:.85rem;white-space:nowrap}
+
+/* Main */
+main{flex:1;position:relative;overflow:hidden}
+.view{position:absolute;inset:0;display:none}
+.view.active{display:flex}
+
+/* 3D view */
+#view-3d{display:none;grid-template-columns:220px 1fr 280px;grid-template-rows:1fr auto}
+#view-3d.active{display:grid}
+.panel{background:var(--navy2);padding:14px;overflow-y:auto;border-right:1px solid var(--navy3)}
+.panel.right{border-right:none;border-left:1px solid var(--navy3)}
+.panel h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--muted);margin-bottom:10px}
+.model-list{display:flex;flex-direction:column;gap:6px}
+.model-list button{text-align:left;padding:10px 12px;border-radius:8px;
+  background:var(--navy3);border:1px solid transparent;color:var(--text);font-size:.9rem}
+.model-list button.active{border-color:var(--cyan);color:var(--cyan)}
+.canvas-wrap{position:relative;background:#0e1830}
+.canvas-wrap canvas{display:block;width:100%;height:100%}
+.canvas-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;flex-wrap:wrap}
+.canvas-tools button{padding:6px 10px;border-radius:6px;background:rgba(19,32,56,.85);
+  border:1px solid var(--navy3);color:var(--text);font-size:.8rem}
+.canvas-tools button.on{background:var(--cyan2);color:#fff}
+.part-title{font-weight:700;color:var(--cyan);margin-bottom:8px}
+.part-section{margin-bottom:8px;font-size:.85rem;line-height:1.4}
+.part-section strong{color:var(--text)}
+.hint{color:var(--muted);font-size:.85rem;font-style:italic}
+
+.timeline{grid-column:1/-1;display:flex;align-items:center;gap:10px;
+  padding:10px 16px;background:var(--navy2);border-top:1px solid var(--navy3)}
+.timeline button{padding:8px 12px;border-radius:8px;background:var(--navy3);
+  border:1px solid var(--navy3);color:var(--text)}
+.timeline button:hover{border-color:var(--cyan)}
+.timeline input[type=range]{flex:1;accent-color:var(--cyan)}
+.timeline select{padding:6px 10px;border-radius:6px;background:var(--navy3);
+  color:var(--text);border:1px solid var(--navy3)}
+
+/* AR */
+#view-ar{display:none;flex-direction:column;align-items:center;justify-content:center}
+#view-ar.active{display:flex}
+.msg{text-align:center;padding:30px;max-width:520px;background:var(--navy2);
+  border-radius:14px;border:1px solid var(--navy3)}
+.msg h2{margin-bottom:12px;color:var(--warn)}
+.msg p{margin-bottom:16px;color:var(--muted);line-height:1.5;font-size:.9rem}
+.msg .btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.msg button{padding:10px 18px;border-radius:8px;background:var(--cyan);
+  color:var(--navy);font-weight:700;border:none}
+.msg button.secondary{background:var(--navy3);color:var(--text)}
+.hidden{display:none!important}
+#arUI{position:absolute;inset:0;pointer-events:none}
+#arUI > *{pointer-events:auto}
+.ar-toolbar{position:absolute;top:14px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;padding:10px;border-radius:12px;
+  background:rgba(19,32,56,.92);border:1px solid var(--navy3)}
+.ar-toolbar select,.ar-toolbar button{padding:8px 12px;border-radius:8px;
+  background:var(--navy3);border:1px solid var(--navy3);color:var(--text)}
+.ar-toolbar button.primary{background:var(--cyan);color:var(--navy);font-weight:700;border:none}
+.ar-controls{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  display:flex;gap:16px;padding:12px 16px;border-radius:12px;
+  background:rgba(19,32,56,.92);border:1px solid var(--navy3);align-items:center}
+.ar-controls label{font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.ar-controls input{accent-color:var(--cyan);width:120px}
+.ar-controls button{padding:6px 12px;border-radius:6px;background:var(--navy3);
+  border:1px solid var(--navy3);color:var(--text)}
+
+/* VR */
+#view-vr{display:none;flex-direction:column}
+#view-vr.active{display:flex}
+.vr-header{display:flex;align-items:center;gap:14px;padding:10px 16px;
+  background:var(--navy2);border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+.vr-mode{display:flex;gap:4px;background:var(--navy);padding:4px;border-radius:10px}
+.vr-mode button{padding:8px 14px;border-radius:8px;background:transparent;
+  border:none;color:var(--muted);font-size:.85rem;font-weight:600}
+.vr-mode button.active{background:var(--navy3);color:var(--cyan)}
+.vr-mode button:disabled{opacity:.35;cursor:not-allowed}
+.vr-notice{font-size:.8rem;color:var(--warn);padding:4px 10px;border-radius:6px;
+  background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3)}
+.vr-notice.hidden{display:none}
+#canvasVR{flex:1;position:relative;background:#0e1830}
+.vr-hud{position:absolute;inset:0;pointer-events:none}
+.vr-hud > *{pointer-events:auto}
+.vr-hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  padding:8px 14px;border-radius:8px;background:rgba(19,32,56,.9);
+  color:var(--muted);font-size:.8rem;white-space:nowrap}
+.vr-model-list{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;
+  gap:6px;padding:10px;border-radius:10px;background:rgba(19,32,56,.9);
+  border:1px solid var(--navy3)}
+.vr-model-list button{padding:6px 10px;border-radius:6px;background:var(--navy3);
+  border:1px solid var(--navy3);color:var(--text);font-size:.8rem;text-align:left}
+.vr-info-panel{position:absolute;top:14px;left:14px;width:280px;padding:14px;
+  border-radius:10px;background:rgba(19,32,56,.95);border:1px solid var(--cyan);
+  color:var(--text);font-size:.85rem}
+.vr-info-panel h4{color:var(--cyan);margin-bottom:8px}
+.vr-info-panel p{margin-bottom:6px;color:var(--muted)}
+
+/* Learn */
+#view-learn{display:none;flex-direction:column;padding:14px;gap:12px}
+#view-learn.active{display:flex}
+.stepper-row{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.stepper{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.step{padding:8px 18px;border-radius:99px;background:var(--navy2);
+  color:var(--muted);font-size:.85rem;font-weight:600;border:1px solid var(--navy3)}
+.step.active{background:var(--cyan2);color:#fff;border-color:var(--cyan)}
+.step.done{background:var(--navy3);color:var(--ok);border-color:var(--ok)}
+#btnResetLearn{padding:8px 14px;background:var(--navy3);border:1px solid var(--navy3);
+  border-radius:99px;color:var(--muted);font-size:.8rem;cursor:pointer}
+.learn-body{flex:1;display:grid;grid-template-columns:1fr 380px;gap:12px;min-height:0}
+.learn-canvas{position:relative;border-radius:12px;overflow:hidden;
+  background:var(--navy2);border:1px solid var(--navy3)}
+.learn-canvas canvas{display:block;width:100%;height:100%}
+.learn-panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:12px;
+  padding:16px;overflow-y:auto}
+.learn-panel h3{color:var(--cyan);margin-bottom:10px;font-size:1rem}
+.learn-panel .instructions{font-size:.85rem;color:var(--muted);margin-bottom:14px}
+.label-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.label-btn{padding:10px 12px;border-radius:8px;background:var(--navy3);
+  border:1px solid transparent;color:var(--text);text-align:left;font-size:.9rem}
+.label-btn.selected{border-color:var(--cyan);color:var(--cyan)}
+.label-btn.matched{background:rgba(34,197,94,.15);color:var(--ok);
+  border-color:var(--ok);cursor:default}
+.progress{margin-top:14px;font-size:.85rem;color:var(--muted)}
+.quiz-option{display:block;width:100%;text-align:left;padding:10px 12px;
+  margin-bottom:8px;border-radius:8px;background:var(--navy3);
+  border:1px solid transparent;color:var(--text);font-size:.9rem}
+.quiz-option:hover{border-color:var(--cyan)}
+.quiz-option.correct{background:rgba(34,197,94,.2);border-color:var(--ok)}
+.quiz-option.wrong{background:rgba(239,68,68,.2);border-color:var(--err)}
+.feedback{padding:10px;border-radius:8px;margin-top:10px;font-size:.85rem;
+  background:rgba(34,211,238,.1);border:1px solid var(--cyan2);color:var(--cyan)}
+.feedback.wrong{background:rgba(239,68,68,.1);border-color:var(--err);color:#fca5a5}
+.learn-nav{display:flex;justify-content:space-between;gap:10px}
+.learn-nav button{padding:10px 18px;border-radius:8px;background:var(--navy3);
+  border:1px solid var(--navy3);color:var(--text)}
+.learn-nav button.primary{background:var(--cyan);color:var(--navy);font-weight:700;border:none}
+.learn-nav button:disabled{opacity:.4;cursor:not-allowed}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;
+  display:flex;align-items:center;justify-content:center;padding:16px}
+.modal.hidden{display:none}
+.modal-content{background:var(--navy2);border:1px solid var(--navy3);border-radius:12px;
+  max-width:680px;width:100%;max-height:88vh;overflow-y:auto;padding:24px;position:relative}
+.modal-close{position:absolute;top:12px;right:12px;padding:4px 12px;background:var(--navy3);
+  border:none;border-radius:6px;color:var(--text);cursor:pointer;font-size:1.1rem}
+.modal-content h2{color:var(--cyan);margin-bottom:14px;font-size:1.15rem}
+.modal-body h3{color:var(--cyan);margin-top:18px;margin-bottom:8px;font-size:.95rem}
+.modal-body p,.modal-body li{font-size:.85rem;line-height:1.55;color:var(--text);margin-bottom:6px}
+.modal-body ul{padding-left:20px;margin-bottom:10px}
+.modal-body code{background:var(--navy);padding:2px 6px;border-radius:4px;
+  font-size:.78rem;color:var(--cyan)}
+.modal-body .lbl-ok{color:var(--ok);font-weight:600}
+.modal-body .lbl-no{color:var(--err);font-weight:600}
+
+/* Mobile */
+@media (max-width:820px){
+  .app-header{flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .main-nav{margin-left:0;order:3;width:100%}
+  .main-nav button{flex:1;padding:8px;font-size:.85rem}
+  #view-3d.active{display:flex;flex-direction:column;grid-template-columns:none}
+  #view-3d .panel{max-height:150px;border-right:none;border-left:none;
+    border-bottom:1px solid var(--navy3)}
+  #view-3d .canvas-wrap{flex:1;min-height:300px}
+  .learn-body{grid-template-columns:1fr;grid-template-rows:1fr auto}
+  .learn-panel{max-height:45vh}
+  .vr-model-list{position:static;flex-direction:row;flex-wrap:wrap;padding:8px}
+  .vr-hint{font-size:.7rem;white-space:normal;text-align:center}
+  .ar-toolbar,.ar-controls{max-width:92vw;flex-wrap:wrap;justify-content:center}
+  .ar-controls input{width:90px}
+  .device-status{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Banner cảnh báo HTTPS -->
+<div class="https-warning hidden" id="httpsWarning">
+  ⚠ Trang đang chạy qua HTTP. Camera/AR/VR <b>sẽ không hoạt động</b>. Vui lòng truy cập qua
+  <code>https://…</code> hoặc <code>localhost</code>.
+</div>
+
+<header class="app-header">
+  <div class="logo"><span class="mark">⚙</span>Xưởng Cơ khí số</div>
+  <nav class="main-nav">
+    <button data-view="3d" class="active">3D</button>
+    <button data-view="ar">AR</button>
+    <button data-view="vr">VR</button>
+    <button data-view="learn">Học tập</button>
+  </nav>
+  <div class="device-status" id="deviceStatus">Đang kiểm tra…</div>
+  <button id="btnHelp">Hướng dẫn</button>
+</header>
+
+<main>
+  <!-- 3D -->
+  <section id="view-3d" class="view active">
+    <aside class="panel">
+      <h3>Mô hình</h3>
+      <div class="model-list" id="modelList"></div>
+      <h3 style="margin-top:20px">Công cụ</h3>
+      <button id="btnExportGLB" style="width:100%;padding:10px;border-radius:8px;
+        background:var(--navy3);border:1px solid var(--navy3);color:var(--text);font-size:.85rem">
+        ⬇ Xuất mô hình (.glb)
+      </button>
+      <p class="hint" style="margin-top:8px;font-size:.75rem">
+        Dùng file .glb này để mở bằng Scene Viewer / Quick Look hoặc chia sẻ cho giáo viên.
+      </p>
+    </aside>
+    <div class="canvas-wrap" id="canvas3d">
+      <div class="canvas-tools">
+        <button id="btnWireframe">Wireframe</button>
+        <button id="btnLabels">Nhãn</button>
+      </div>
+    </div>
+    <aside class="panel right">
+      <h3>Bộ phận</h3>
+      <div id="partInfo"><p class="hint">Chạm vào bộ phận để xem thông tin</p></div>
+    </aside>
+    <div class="timeline">
+      <button id="btnPlay" title="Chạy / Dừng">⏸</button>
+      <input type="range" id="sliderTime" min="0" max="100" value="0">
+      <select id="speedSelect">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="2">2×</option>
+      </select>
+      <button id="btnResetView">Reset góc nhìn</button>
+    </div>
+  </section>
+
+  <!-- AR -->
+  <section id="view-ar" class="view">
+    <div id="arLoading" class="msg"><h2>Đang kiểm tra thiết bị…</h2></div>
+    <div id="arUnsupported" class="msg hidden">
+      <h2>⚠ Thiết bị này không hỗ trợ AR trực tiếp</h2>
+      <p>Cần <b>camera</b> + <b>WebXR</b>, hoặc <b>ARCore</b> (Android) / <b>ARKit</b> (iOS).
+         Nếu dùng iOS/Safari, xem hướng dẫn dự phòng bên dưới.</p>
+      <div class="btn-row">
+        <button id="btnARto3D">Xem mô hình ở chế độ 3D</button>
+        <button class="secondary" id="btnARExport">⬇ Xuất .glb để dùng AR ngoài</button>
+        <button class="secondary" id="btnARHelp">Hướng dẫn AR</button>
+      </div>
+    </div>
+    <div id="arUI" class="hidden">
+      <div class="ar-toolbar">
+        <select id="arModelSelect">
+          <option value="gear">Bộ truyền bánh răng</option>
+          <option value="belt">Bộ truyền đai</option>
+          <option value="crank">Cơ cấu tay quay – con trượt</option>
+        </select>
+        <button id="btnPlaceModel" class="primary">Đặt mô hình</button>
+        <button id="btnExitAR">Thoát AR</button>
+      </div>
+      <div class="ar-controls" id="arControls" style="display:none">
+        <label>Kích thước
+          <input type="range" id="arScale" min="10" max="200" value="30">
+        </label>
+        <label>Xoay
+          <input type="range" id="arRotate" min="0" max="360" value="0">
+        </label>
+        <button id="btnArReset">Đặt lại</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- VR -->
+  <section id="view-vr" class="view">
+    <div class="vr-header">
+      <div class="vr-mode">
+        <button id="btnVR3D" class="active">🖥 3D khám phá</button>
+        <button id="btnVRImmersive">🥽 VR nhập vai</button>
+      </div>
+      <div class="vr-notice" id="vrNotice">
+        Đây là không gian 3D khám phá bằng chuột/bàn phím — không phải VR nhập vai hoàn chỉnh.
+      </div>
+    </div>
+    <div class="canvas-wrap" id="canvasVR">
+      <div class="vr-hud">
+        <div class="vr-model-list" id="vrModelList"></div>
+        <div class="vr-hint">Kéo chuột để xoay · WASD di chuyển · E tương tác</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Learn -->
+  <section id="view-learn" class="view">
+    <div class="stepper-row">
+      <div class="stepper">
+        <div class="step active" data-step="1">1. Quan sát</div>
+        <div class="step" data-step="2">2. Nguyên lí</div>
+        <div class="step" data-step="3">3. Vận dụng</div>
+      </div>
+      <button id="btnResetLearn" title="Xoá toàn bộ tiến độ đã lưu">↺ Bắt đầu lại</button>
+    </div>
+    <div class="learn-body">
+      <div class="learn-canvas" id="canvasLearn"></div>
+      <div class="learn-panel" id="learnPanel"></div>
+    </div>
+    <div class="learn-nav">
+      <button id="btnLearnBack" disabled>← Quay lại</button>
+      <button id="btnLearnNext" class="primary" disabled>Tiếp tục →</button>
+    </div>
+  </section>
+</main>
+
+<!-- Modal hướng dẫn & giới hạn -->
+<div class="modal hidden" id="helpModal">
+  <div class="modal-content">
+    <button class="modal-close" id="btnCloseHelp">×</button>
+    <h2>Hướng dẫn & Giới hạn kỹ thuật</h2>
+    <div class="modal-body">
+
+      <h3>Cách chạy để dùng đầy đủ tính năng</h3>
+      <ul>
+        <li>Đặt file HTML lên máy chủ có <b>HTTPS</b> (Netlify, Vercel, GitHub Pages, Cloudflare Pages — miễn phí).</li>
+        <li>Hoặc chạy trên <code>localhost</code> khi phát triển (dùng <code>npx serve</code>).</li>
+        <li>Mở bằng Chrome (Android) / Safari (iOS) / trình duyệt có WebXR.</li>
+      </ul>
+
+      <h3>AR – Hoạt động được khi nào?</h3>
+      <ul>
+        <li><span class="lbl-ok">✓</span> Chrome Android + ARCore: AR đầy đủ.</li>
+        <li><span class="lbl-no">✗</span> Safari iOS: <b>không hỗ trợ WebXR</b> → cần dùng giải pháp dự phòng.</li>
+        <li><span class="lbl-no">✗</span> Desktop thường: không có camera AR → dùng nút “Xem ở chế độ 3D”.</li>
+      </ul>
+
+      <h3>Dự phòng AR cho iOS / thiết bị khác</h3>
+      <ul>
+        <li>Bấm <b>“Xuất .glb”</b> ở phân hệ 3D để tải mô hình về máy.</li>
+        <li>Upload file .glb lên máy chủ của bạn (HTTPS).</li>
+        <li>Với iOS: dùng công cụ <b>Reality Converter</b> (miễn phí từ Apple) để chuyển .glb → <b>.usdz</b>, upload lên cùng thư mục.</li>
+        <li>Nhúng mô hình bằng thẻ <code>&lt;model-viewer&gt;</code> — sẽ tự mở AR Quick Look (iOS) hoặc Scene Viewer (Android).</li>
+      </ul>
+
+      <h3>VR nhập vai</h3>
+      <ul>
+        <li>Chỉ chạy khi có <b>kính VR + trình duyệt hỗ trợ</b> (Meta Quest Browser, Wolvic, Chrome PC + SteamVR).</li>
+        <li>Không thể khắc phục bằng code nếu thiếu phần cứng.</li>
+        <li>Chế độ <b>“3D khám phá”</b> là phương án thay thế đầy đủ trên máy tính/điện thoại.</li>
+      </ul>
+
+      <h3>Lưu tiến độ</h3>
+      <p>Tiến độ 3 trạm được lưu trong <code>localStorage</code> của trình duyệt. Nếu xoá dữ liệu trình duyệt, tiến độ sẽ mất. Bấm <b>“↺ Bắt đầu lại”</b> ở tab Học tập để xoá thủ công.</p>
+
+      <h3>Nội dung chuyên môn</h3>
+      <p>Nội dung hiện tại là <b>bản mẫu</b> — cần giáo viên duyệt lại. Để thay đổi nội dung:</p>
+      <ul>
+        <li>Mở file HTML, tìm object <code>PART_INFO</code> (mục thông tin bộ phận) và <code>LEARN_DATA</code> (mục câu hỏi 3 trạm).</li>
+        <li>Sửa trực tiếp tên bộ phận, câu hỏi, đáp án.</li>
+        <li>Hoặc chuyển 2 object đó sang file <code>noi-dung.json</code> riêng và tải bằng <code>fetch()</code> (đã có sẵn cấu trúc JSON, chỉ cần copy).</li>
+      </ul>
+
+      <h3>Những gì KHÔNG thể khắc phục bằng code</h3>
+      <ul>
+        <li><b>AR trên iOS Safari</b> – cần file .usdz được host sẵn.</li>
+        <li><b>VR nhập vai</b> – cần kính VR + trình duyệt hỗ trợ.</li>
+        <li><b>HTTPS</b> – cần hạ tầng máy chủ, không phải chỉnh code.</li>
+        <li><b>Chuyên môn</b> – cần giáo viên duyệt nội dung.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+/* ============================================================
+   1. KIỂM TRA HTTPS
+   ============================================================ */
+(function checkHTTPS(){
+  const ok = location.protocol === 'https:'
+          || location.hostname === 'localhost'
+          || location.hostname === '127.0.0.1';
+  if(!ok) document.getElementById('httpsWarning').classList.remove('hidden');
+})();
+
+/* ============================================================
+   2. DỮ LIỆU – tách riêng, có thể chuyển sang noi-dung.json
+   ============================================================ */
+const PART_INFO = {
+  gear:{
+    title:'Bộ truyền bánh răng',
+    parts:{
+      gearA:{name:'Bánh răng chủ động',
+        desc:'Bánh răng nhận chuyển động từ trục chủ động, có số răng nhỏ hơn.',
+        func:'Truyền chuyển động quay sang bánh răng bị động.'},
+      gearB:{name:'Bánh răng bị động',
+        desc:'Bánh răng ăn khớp với bánh chủ động, có số răng lớn hơn.',
+        func:'Nhận chuyển động, đổi chiều quay và thay đổi tốc độ.'},
+      shaftA:{name:'Trục chủ động',desc:'Trục gắn bánh răng chủ động.',
+        func:'Nhận chuyển động từ nguồn dẫn động (động cơ).'},
+      shaftB:{name:'Trục bị động',desc:'Trục gắn bánh răng bị động.',
+        func:'Đưa chuyển động ra ngoài cơ cấu.'}
+    }
+  },
+  belt:{
+    title:'Bộ truyền đai',
+    parts:{
+      pulleyA:{name:'Bánh đai chủ động',desc:'Bánh đai nhận chuyển động từ trục chủ động.',
+        func:'Dẫn động dây đai chuyển động.'},
+      pulleyB:{name:'Bánh đai bị động',desc:'Bánh đai nhận chuyển động từ dây đai.',
+        func:'Nhận chuyển động quay cùng chiều với bánh chủ động.'},
+      belt:{name:'Dây đai',desc:'Vòng đai bao quanh hai bánh đai, truyền lực nhờ ma sát.',
+        func:'Truyền chuyển động quay giữa hai trục song song; có thể trượt khi quá tải.'}
+    }
+  },
+  crank:{
+    title:'Cơ cấu tay quay – con trượt',
+    parts:{
+      crank:{name:'Tay quay',desc:'Đĩa quay quanh trục cố định, có chốt lệch tâm.',
+        func:'Biến chuyển động quay thành chuyển động của thanh truyền.'},
+      rod:{name:'Thanh truyền',desc:'Thanh nối giữa tay quay và con trượt.',
+        func:'Truyền lực và biến đổi chuyển động quay thành tịnh tiến.'},
+      slider:{name:'Con trượt',desc:'Khối trượt trong rãnh dẫn hướng.',
+        func:'Chuyển động tịnh tiến qua lại theo chu kì của tay quay.'}
+    }
+  }
+};
+
+const MODEL_LABELS = {
+  gear:'Bộ truyền bánh răng',
+  belt:'Bộ truyền đai',
+  crank:'Cơ cấu tay quay – con trượt'
+};
+
+/* ============================================================
+   3. TIỆN ÍCH
+   ============================================================ */
+function findPartId(obj){
+  while(obj){
+    if(obj.userData && obj.userData.partId) return obj.userData.partId;
+    obj = obj.parent;
+  }
+  return null;
+}
+function createLabelSprite(text){
+  const c=document.createElement('canvas'); c.width=512; c.height=96;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='rgba(10,20,40,0.9)'; ctx.strokeStyle='#22d3ee'; ctx.lineWidth=4;
+  roundRect(ctx,4,4,504,88,18); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#22d3ee'; ctx.font='bold 40px system-ui,sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text,256,48);
+  const tex=new THREE.CanvasTexture(c);
+  const mat=new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true});
+  const sp=new THREE.Sprite(mat); sp.scale.set(1.6,0.3,1); return sp;
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+/* ============================================================
+   4. BUILDERS MÔ HÌNH
+   ============================================================ */
+const MAT = {
+  steel:  new THREE.MeshStandardMaterial({color:0x9bb0c9,metalness:0.85,roughness:0.3}),
+  bronze: new THREE.MeshStandardMaterial({color:0xd99a5c,metalness:0.75,roughness:0.35}),
+  dark:   new THREE.MeshStandardMaterial({color:0x334155,metalness:0.7,roughness:0.45}),
+  belt:   new THREE.MeshStandardMaterial({color:0x1e293b,metalness:0.2,roughness:0.9}),
+  cyan:   new THREE.MeshStandardMaterial({color:0x22d3ee,emissive:0x0e7490,emissiveIntensity:0.5})
+};
+
+function createGearMesh(radius,teeth,thickness,material){
+  const g=new THREE.Group();
+  const disk=new THREE.Mesh(new THREE.CylinderGeometry(radius*0.85,radius*0.85,thickness,32),material);
+  disk.rotation.x=Math.PI/2; g.add(disk);
+  const toothGeo=new THREE.BoxGeometry(radius*0.16,thickness,radius*0.3);
+  for(let i=0;i<teeth;i++){
+    const ang=(i/teeth)*Math.PI*2;
+    const t=new THREE.Mesh(toothGeo,material);
+    t.position.set(Math.cos(ang)*radius*0.92,Math.sin(ang)*radius*0.92,0);
+    t.rotation.z=ang; g.add(t);
+  }
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(radius*0.18,radius*0.18,thickness*1.5,16),MAT.dark);
+  hub.rotation.x=Math.PI/2; g.add(hub);
+  return g;
+}
+function buildGear(){
+  const group=new THREE.Group(); const parts={}; const labels=[];
+  const rA=0.6,rB=0.9,tA=16,tB=24,th=0.16;
+  const gapX=rA+rB;
+  const gearA=createGearMesh(rA,tA,th,MAT.steel);
+  gearA.position.set(-gapX/2,0,0); gearA.userData.partId='gearA';
+  parts.gearA=gearA; group.add(gearA);
+  const gearB=createGearMesh(rB,tB,th,MAT.bronze);
+  gearB.position.set(gapX/2,0,0); gearB.userData.partId='gearB';
+  parts.gearB=gearB; group.add(gearB);
+  const shaftGeo=new THREE.CylinderGeometry(0.08,0.08,0.6,16);
+  const sA=new THREE.Mesh(shaftGeo,MAT.dark); sA.rotation.x=Math.PI/2;
+  sA.position.set(-gapX/2,0,0); sA.userData.partId='shaftA'; parts.shaftA=sA; group.add(sA);
+  const sB=new THREE.Mesh(shaftGeo,MAT.dark); sB.rotation.x=Math.PI/2;
+  sB.position.set(gapX/2,0,0); sB.userData.partId='shaftB'; parts.shaftB=sB; group.add(sB);
+  const lblA=createLabelSprite('Bánh răng chủ động');
+  lblA.position.set(-gapX/2,rA+0.55,0); lblA.visible=false; group.add(lblA); labels.push(lblA);
+  const lblB=createLabelSprite('Bánh răng bị động');
+  lblB.position.set(gapX/2,rB+0.55,0); lblB.visible=false; group.add(lblB); labels.push(lblB);
+  const omegaA=1.0, omegaB=-omegaA*(tA/tB);
+  return{
+    scene:group,parts,labels,
+    update(t){ gearA.rotation.z=omegaA*t; gearB.rotation.z=omegaB*t; },
+    reset(){ gearA.rotation.z=0; gearB.rotation.z=0; }
+  };
+}
+function buildBelt(){
+  const group=new THREE.Group(); const parts={}; const labels=[];
+  const r=0.5,halfW=0.7,th=0.22;
+  function pulley(x){
+    const p=new THREE.Group();
+    const disk=new THREE.Mesh(new THREE.CylinderGeometry(r,r,th,32),MAT.steel);
+    disk.rotation.x=Math.PI/2; p.add(disk);
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,th*1.3,16),MAT.dark);
+    hub.rotation.x=Math.PI/2; p.add(hub);
+    p.position.x=x; return p;
+  }
+  const pA=pulley(-halfW); pA.userData.partId='pulleyA'; parts.pulleyA=pA; group.add(pA);
+  const pB=pulley(halfW); pB.userData.partId='pulleyB'; parts.pulleyB=pB; group.add(pB);
+  function stadium(rad){
+    const s=new THREE.Shape();
+    s.absarc(-halfW,0,rad,Math.PI/2,Math.PI*1.5,false);
+    s.lineTo(halfW,-rad);
+    s.absarc(halfW,0,rad,-Math.PI/2,Math.PI/2,false);
+    s.lineTo(-halfW,rad); return s;
+  }
+  const outer=stadium(r+0.05), inner=stadium(r+0.01);
+  outer.holes.push(inner);
+  const beltGeo=new THREE.ExtrudeGeometry(outer,{depth:th,bevelEnabled:false});
+  beltGeo.translate(0,0,-th/2);
+  const belt=new THREE.Mesh(beltGeo,MAT.belt);
+  belt.userData.partId='belt'; parts.belt=belt; group.add(belt);
+  const markers=[]; const N=10;
+  const mg=new THREE.BoxGeometry(0.07,0.09,th*0.9);
+  for(let i=0;i<N;i++){
+    const m=new THREE.Mesh(mg,MAT.cyan); group.add(m); markers.push(m);
+  }
+  const totalLen=2*Math.PI*r + 4*halfW;
+  function ptOnBelt(s){
+    s=((s%totalLen)+totalLen)%totalLen;
+    const arcLen=Math.PI*r, strLen=2*halfW;
+    if(s<arcLen){const a=Math.PI/2+s/r; return {x:-halfW+r*Math.cos(a),y:r*Math.sin(a)};}
+    s-=arcLen; if(s<strLen) return {x:-halfW+s,y:-r};
+    s-=strLen; if(s<arcLen){const a=-Math.PI/2+s/r; return {x:halfW+r*Math.cos(a),y:r*Math.sin(a)};}
+    s-=arcLen; return {x:halfW-s,y:r};
+  }
+  const lblA=createLabelSprite('Bánh đai chủ động');
+  lblA.position.set(-halfW,r+0.55,0); lblA.visible=false; group.add(lblA); labels.push(lblA);
+  const lblB=createLabelSprite('Bánh đai bị động');
+  lblB.position.set(halfW,r+0.55,0); lblB.visible=false; group.add(lblB); labels.push(lblB);
+  const lblC=createLabelSprite('Dây đai');
+  lblC.position.set(0,-r-0.5,0); lblC.visible=false; group.add(lblC); labels.push(lblC);
+  const omega=1.1;
+  return{
+    scene:group,parts,labels,
+    update(t){
+      const a=omega*t;
+      pA.rotation.z=a; pB.rotation.z=a;
+      const sBase=a*r;
+      for(let i=0;i<N;i++){
+        const p=ptOnBelt(sBase+(i/N)*totalLen);
+        markers[i].position.set(p.x,p.y,0);
+      }
+    },
+    reset(){ pA.rotation.z=0; pB.rotation.z=0; }
+  };
+}
+function buildCrank(){
+  const group=new THREE.Group(); const parts={}; const labels=[];
+  const R=0.5,L=1.5,th=0.16,crankX=-0.7;
+  const crank=new THREE.Group();
+  const disk=new THREE.Mesh(new THREE.CylinderGeometry(R,R,th,32),MAT.bronze);
+  disk.rotation.x=Math.PI/2; crank.add(disk);
+  const pin=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,th*1.6,12),MAT.dark);
+  pin.rotation.x=Math.PI/2; pin.position.x=R; crank.add(pin);
+  crank.position.x=crankX; crank.userData.partId='crank';
+  parts.crank=crank; group.add(crank);
+  const rodGroup=new THREE.Group();
+  const rodCyl=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,L,12),MAT.steel);
+  rodGroup.add(rodCyl);
+  const capGeo=new THREE.SphereGeometry(0.09,12,12);
+  const c1=new THREE.Mesh(capGeo,MAT.dark); c1.position.y=L/2; rodGroup.add(c1);
+  const c2=new THREE.Mesh(capGeo,MAT.dark); c2.position.y=-L/2; rodGroup.add(c2);
+  rodGroup.userData.partId='rod'; parts.rod=rodGroup; group.add(rodGroup);
+  const slider=new THREE.Group();
+  slider.add(new THREE.Mesh(new THREE.BoxGeometry(0.35,0.35,0.3),MAT.steel));
+  const spin=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.35,10),MAT.dark);
+  spin.rotation.x=Math.PI/2; slider.add(spin);
+  slider.userData.partId='slider'; parts.slider=slider; group.add(slider);
+  const railGeo=new THREE.BoxGeometry(1.9,0.05,0.34);
+  const rail1=new THREE.Mesh(railGeo,MAT.dark); rail1.position.set(crankX+1.15,0.22,0); group.add(rail1);
+  const rail2=new THREE.Mesh(railGeo,MAT.dark); rail2.position.set(crankX+1.15,-0.22,0); group.add(rail2);
+  const lblA=createLabelSprite('Tay quay');
+  lblA.position.set(crankX,R+0.55,0); lblA.visible=false; group.add(lblA); labels.push(lblA);
+  const lblB=createLabelSprite('Thanh truyền');
+  lblB.position.set(crankX+1.0,0.8,0); lblB.visible=false; group.add(lblB); labels.push(lblB);
+  const lblC=createLabelSprite('Con trượt');
+  lblC.position.set(crankX+1.7,0.6,0); lblC.visible=false; group.add(lblC); labels.push(lblC);
+  const omega=1.2;
+  return{
+    scene:group,parts,labels,
+    update(t){
+      const theta=omega*t;
+      crank.rotation.z=theta;
+      const pinX=crankX+R*Math.cos(theta);
+      const pinY=R*Math.sin(theta);
+      const sliderX=crankX+R*Math.cos(theta)+Math.sqrt(L*L-R*R*Math.sin(theta)*Math.sin(theta));
+      const midX=(pinX+sliderX)/2, midY=pinY/2;
+      rodGroup.position.set(midX,midY,0);
+      const dx=sliderX-pinX, dy=-pinY;
+      rodGroup.rotation.z=Math.atan2(-dx,dy);
+      slider.position.set(sliderX,0,0);
+    },
+    reset(){ crank.rotation.z=0; }
+  };
+}
+
+const MODEL_BUILDERS={gear:buildGear,belt:buildBelt,crank:buildCrank};
+function makeModel(key){ return MODEL_BUILDERS[key](); }
+
+/* ============================================================
+   5. THREE WRAPPER
+   ============================================================ */
+class ThreeScene{
+  constructor(container,cameraPos=[3,2.2,4.2]){
+    this.container=container;
+    this.scene=new THREE.Scene();
+    this.scene.background=new THREE.Color(0x0a1428);
+    this.camera=new THREE.PerspectiveCamera(45,1,0.1,100);
+    this.camera.position.set(...cameraPos);
+    this.camera.lookAt(0,0,0);
+    this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    this.renderer.xr.enabled=true;
+    this.renderer.shadowMap.enabled=true;
+    this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    container.appendChild(this.renderer.domElement);
+    this.scene.add(new THREE.AmbientLight(0xffffff,0.55));
+    const d=new THREE.DirectionalLight(0xffffff,1.2);
+    d.position.set(5,10,7); d.castShadow=true; this.scene.add(d);
+    const f=new THREE.DirectionalLight(0x66ccff,0.35);
+    f.position.set(-5,-3,-5); this.scene.add(f);
+    this.controls=new OrbitControls(this.camera,this.renderer.domElement);
+    this.controls.enableDamping=true;
+    this.controls.dampingFactor=0.08;
+    this.controls.minDistance=1.5;
+    this.controls.maxDistance=15;
+    this.currentModel=null;
+    this.playState={playing:true,time:0,speed:1};
+    this._resize=this.resize.bind(this);
+    window.addEventListener('resize',this._resize);
+    this.resize();
+  }
+  resize(){
+    const w=this.container.clientWidth, h=this.container.clientHeight;
+    if(!w||!h) return;
+    this.camera.aspect=w/h; this.camera.updateProjectionMatrix();
+    this.renderer.setSize(w,h,false);
+  }
+  setModel(model){
+    if(this.currentModel) this.scene.remove(this.currentModel.scene);
+    this.currentModel=model;
+    this.scene.add(model.scene);
+    this.playState.time=0;
+    if(model.reset) model.reset();
+  }
+  toggleLabels(on){
+    if(this.currentModel) this.currentModel.labels.forEach(l=>l.visible=on);
+  }
+  start(){ this.renderer.setAnimationLoop((t)=>this.animate(t)); }
+  animate(t){
+    if(this.container.clientWidth===0) return;
+    const dt=this._last?(t-this._last)/1000:0;
+    this._last=t;
+    if(this.playState.playing && this.currentModel){
+      this.playState.time+=dt*this.playState.speed;
+      this.currentModel.update(this.playState.time);
+    }
+    this.controls.update();
+    this.renderer.render(this.scene,this.camera);
+  }
+}
+
+/* ============================================================
+   6. LOCAL STORAGE
+   ============================================================ */
+const STORAGE_KEY='xuongcokhi_progress_v1';
+function saveProgress(){
+  const data={
+    learnStep:learnStep,
+    matched1:Array.from(learnState[1].matched),
+    answers2:learnState[2].answers,
+    answers3:learnState[3].answers,
+    lastModel3D:currentModelKey3D,
+    timestamp:Date.now()
+  };
+  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(data)); }catch(e){ console.warn('save fail',e); }
+}
+function loadProgress(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    return raw?JSON.parse(raw):null;
+  }catch(e){ return null; }
+}
+function clearProgress(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+}
+
+/* ============================================================
+   7. 3D VIEW
+   ============================================================ */
+const view3D=new ThreeScene(document.getElementById('canvas3d'),[3.2,2.2,4.2]);
+view3D.start();
+const models3D={gear:makeModel('gear'),belt:makeModel('belt'),crank:makeModel('crank')};
+let currentModelKey3D='gear';
+
+// Khôi phục state đã lưu
+const saved=loadProgress();
+if(saved){
+  currentModelKey3D=saved.lastModel3D||'gear';
+}
+view3D.setModel(models3D[currentModelKey3D]);
+
+const modelListEl=document.getElementById('modelList');
+Object.entries(MODEL_LABELS).forEach(([key,label])=>{
+  const b=document.createElement('button');
+  b.textContent=label; b.dataset.model=key;
+  if(key===currentModelKey3D) b.classList.add('active');
+  b.addEventListener('click',()=>{
+    modelListEl.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentModelKey3D=key;
+    view3D.setModel(models3D[key]);
+    clearPartInfo();
+    saveProgress();
+  });
+  modelListEl.appendChild(b);
+});
+
+const raycaster=new THREE.Raycaster();
+const mouseVec=new THREE.Vector2();
+let currentlyHighlighted=null;
+
+function highlightPart(model,partId){
+  unhighlight(model);
+  const part=model.parts[partId];
+  if(!part) return;
+  part.traverse(o=>{
+    if(o.isMesh){
+      if(!o.userData._origMat) o.userData._origMat=o.material;
+      const m=o.material.clone();
+      m.emissive=new THREE.Color(0x22d3ee);
+      m.emissiveIntensity=0.55;
+      o.material=m;
+    }
+  });
+  currentlyHighlighted=part;
+}
+function unhighlight(model){
+  if(!currentlyHighlighted) return;
+  currentlyHighlighted.traverse(o=>{
+    if(o.isMesh && o.userData._origMat){
+      o.material=o.userData._origMat; delete o.userData._origMat;
+    }
+  });
+  currentlyHighlighted=null;
+}
+function clearPartInfo(){
+  document.getElementById('partInfo').innerHTML='<p class="hint">Chạm vào bộ phận để xem thông tin</p>';
+  if(view3D.currentModel) unhighlight(view3D.currentModel);
+}
+function showPartInfo(modelKey,partId){
+  const info=PART_INFO[modelKey].parts[partId];
+  if(!info) return;
+  document.getElementById('partInfo').innerHTML=`
+    <div class="part-title">${info.name}</div>
+    <div class="part-section"><strong>Cấu tạo:</strong> ${info.desc}</div>
+    <div class="part-section"><strong>Chức năng:</strong> ${info.func}</div>`;
+  highlightPart(view3D.currentModel,partId);
+}
+function pickPart(event,sceneMgr){
+  const rect=sceneMgr.renderer.domElement.getBoundingClientRect();
+  mouseVec.x=((event.clientX-rect.left)/rect.width)*2-1;
+  mouseVec.y=-((event.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouseVec,sceneMgr.camera);
+  if(!sceneMgr.currentModel) return null;
+  const hits=raycaster.intersectObjects(sceneMgr.currentModel.scene.children,true);
+  if(!hits.length) return null;
+  return findPartId(hits[0].object);
+}
+view3D.renderer.domElement.addEventListener('click',(e)=>{
+  const id=pickPart(e,view3D);
+  if(id) showPartInfo(currentModelKey3D,id);
+});
+
+let labelsOn=false;
+document.getElementById('btnLabels').addEventListener('click',function(){
+  labelsOn=!labelsOn; this.classList.toggle('on',labelsOn);
+  view3D.toggleLabels(labelsOn);
+});
+let wireOn=false;
+document.getElementById('btnWireframe').addEventListener('click',function(){
+  wireOn=!wireOn; this.classList.toggle('on',wireOn);
+  if(!view3D.currentModel) return;
+  view3D.currentModel.scene.traverse(o=>{
+    if(o.isMesh && o.material) o.material.wireframe=wireOn;
+  });
+});
+document.getElementById('btnPlay').addEventListener('click',function(){
+  view3D.playState.playing=!view3D.playState.playing;
+  this.textContent=view3D.playState.playing?'⏸':'▶';
+});
+document.getElementById('speedSelect').addEventListener('change',function(){
+  view3D.playState.speed=parseFloat(this.value);
+});
+document.getElementById('sliderTime').addEventListener('input',function(){
+  view3D.playState.time=parseFloat(this.value)*5;
+  if(!view3D.playState.playing && view3D.currentModel){
+    view3D.currentModel.update(view3D.playState.time);
+  }
+});
+document.getElementById('btnResetView').addEventListener('click',()=>{
+  view3D.camera.position.set(3.2,2.2,4.2);
+  view3D.controls.target.set(0,0,0);
+  view3D.controls.update();
+});
+
+/* Xuất GLB */
+document.getElementById('btnExportGLB').addEventListener('click',()=>exportModel(currentModelKey3D));
+function exportModel(modelKey){
+  const model=models3D[modelKey] || (learnModels && learnModels[modelKey]);
+  if(!model){ alert('Chưa có mô hình để xuất.'); return; }
+  const exporter=new GLTFExporter();
+  exporter.parse(model.scene,(result)=>{
+    const blob=new Blob([result],{type:'model/gltf-binary'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`xuongcokhi-${modelKey}.glb`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },(err)=>{ alert('Lỗi xuất mô hình: '+(err.message||err)); },{binary:true});
+}
+
+/* ============================================================
+   8. NAV
+   ============================================================ */
+const views=['3d','ar','vr','learn'];
+document.querySelectorAll('.main-nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const v=b.dataset.view;
+    document.querySelectorAll('.main-nav button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    views.forEach(name=>{
+      document.getElementById('view-'+name).classList.toggle('active',name===v);
+    });
+    setTimeout(()=>{
+      if(v==='3d') view3D.resize();
+      if(v==='vr' && window.vrCtl) window.vrCtl.resize();
+      if(v==='learn' && window.learnScene) window.learnScene.resize();
+    },60);
+    if(v==='ar') checkARS();
+  });
+});
+
+/* ============================================================
+   9. DEVICE STATUS
+   ============================================================ */
+(async function initDeviceStatus(){
+  const el=document.getElementById('deviceStatus');
+  if(!navigator.xr){
+    el.textContent='WebXR không hỗ trợ';
+    el.classList.add('warn');
+    document.getElementById('btnVRImmersive').disabled=true;
+    return;
+  }
+  let arOK=false, vrOK=false;
+  try{ arOK=await navigator.xr.isSessionSupported('immersive-ar'); }catch(e){}
+  try{ vrOK=await navigator.xr.isSessionSupported('immersive-vr'); }catch(e){}
+  el.textContent=`AR ${arOK?'✓':'✗'} · VR ${vrOK?'✓':'✗'}`;
+  el.classList.add(arOK||vrOK?'ok':'warn');
+  if(!vrOK) document.getElementById('btnVRImmersive').disabled=true;
+})();
+
+/* ============================================================
+   10. AR
+   ============================================================ */
+let arChecked=false;
+async function checkARS(){
+  if(arChecked) return;
+  arChecked=true;
+  const loading=document.getElementById('arLoading');
+  const unsup=document.getElementById('arUnsupported');
+  const ui=document.getElementById('arUI');
+  if(!navigator.xr){
+    loading.classList.add('hidden'); unsup.classList.remove('hidden'); return;
+  }
+  let ok=false;
+  try{ ok=await navigator.xr.isSessionSupported('immersive-ar'); }catch(e){}
+  loading.classList.add('hidden');
+  if(!ok){ unsup.classList.remove('hidden'); return; }
+  ui.classList.remove('hidden');
+}
+document.getElementById('btnARto3D').addEventListener('click',()=>{
+  document.querySelector('.main-nav button[data-view="3d"]').click();
+});
+document.getElementById('btnARExport').addEventListener('click',()=>exportModel(currentModelKey3D));
+document.getElementById('btnARHelp').addEventListener('click',()=>openHelp());
+
+class ARController{
+  constructor(){
+    this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    this.renderer.setClearColor(0x000000,0);
+    this.renderer.xr.enabled=true;
+    this.scene=new THREE.Scene();
+    this.camera=new THREE.PerspectiveCamera();
+    this.scene.add(new THREE.HemisphereLight(0xffffff,0x8899bb,1.4));
+    const d=new THREE.DirectionalLight(0xffffff,1.0); d.position.set(2,3,2); this.scene.add(d);
+    this.reticle=new THREE.Mesh(
+      new THREE.RingGeometry(0.08,0.1,32).rotateX(-Math.PI/2),
+      new THREE.MeshBasicMaterial({color:0x22d3ee})
+    );
+    this.reticle.matrixAutoUpdate=false; this.reticle.visible=false;
+    this.scene.add(this.reticle);
+    this.model=null; this.placed=false;
+    this.hitTestSource=null; this.hitTestRequested=false;
+    this.session=null; this.userScale=0.3; this.userRot=0;
+    this.renderer.setAnimationLoop((t,f)=>this.render(t,f));
+  }
+  async start(modelKey){
+    try{
+      this.session=await navigator.xr.requestSession('immersive-ar',{
+        requiredFeatures:['hit-test'],
+        optionalFeatures:['dom-overlay'],
+        domOverlay:{root:document.getElementById('arUI')}
+      });
+      this.renderer.xr.setReferenceSpaceType('local');
+      await this.renderer.xr.setSession(this.session);
+      const view=document.getElementById('view-ar');
+      view.appendChild(this.renderer.domElement);
+      this.renderer.domElement.style.cssText='position:absolute;inset:0;width:100%;height:100%';
+      this.setModel(modelKey);
+      this.session.addEventListener('end',()=>{
+        document.getElementById('arControls').style.display='none';
+        document.getElementById('btnPlaceModel').textContent='Đặt mô hình';
+        this.session=null; this.hitTestSource=null; this.hitTestRequested=false;
+        this.placed=false; this.reticle.visible=false;
+        this.setModel(null);
+        this.renderer.domElement.remove();
+      });
+    }catch(err){
+      alert('Không thể khởi động AR: '+err.message+'\nXem mục "Hướng dẫn AR" để biết cách dự phòng.');
+    }
+  }
+  setModel(modelKey){
+    if(this.model) this.scene.remove(this.model.scene);
+    this.model=null; this.placed=false;
+    if(modelKey){
+      this.model=makeModel(modelKey);
+      this.model.scene.visible=false;
+      this.model.scene.scale.setScalar(this.userScale);
+      this.scene.add(this.model.scene);
+    }
+  }
+  render(t,frame){
+    if(!frame || !this.session) return;
+    const ref=this.renderer.xr.getReferenceSpace();
+    if(this.model && !this.placed){
+      if(!this.hitTestRequested){
+        const ses=this.renderer.xr.getSession();
+        ses.requestReferenceSpace('viewer').then(vs=>ses.requestHitTestSource({space:vs}))
+          .then(s=>{ this.hitTestSource=s; });
+        this.hitTestRequested=true;
+      }
+      if(this.hitTestSource){
+        const results=frame.getHitTestResults(this.hitTestSource);
+        if(results.length>0){
+          const pose=results[0].getPose(ref);
+          this.reticle.visible=true;
+          this.reticle.matrix.fromArray(pose.transform.matrix);
+        }else this.reticle.visible=false;
+      }
+    }
+    if(this.placed && this.model) this.model.update(t/1000);
+    this.renderer.render(this.scene,this.camera);
+  }
+  place(){
+    if(!this.model || !this.reticle.visible || this.placed) return;
+    const p=new THREE.Vector3().setFromMatrixPosition(this.reticle.matrix);
+    this.model.scene.position.copy(p);
+    this.model.scene.visible=true;
+    this.placed=true; this.reticle.visible=false;
+    document.getElementById('arControls').style.display='flex';
+    document.getElementById('btnPlaceModel').textContent='Đã đặt';
+  }
+  applyControls(){
+    if(!this.model) return;
+    this.model.scene.scale.setScalar(this.userScale);
+    this.model.scene.rotation.y=this.userRot;
+  }
+}
+const arCtl=new ARController();
+document.getElementById('btnPlaceModel').addEventListener('click',()=>{
+  if(arCtl.session) arCtl.place();
+  else arCtl.start(document.getElementById('arModelSelect').value);
+});
+document.getElementById('btnExitAR').addEventListener('click',()=>{
+  if(arCtl.session) arCtl.session.end();
+});
+document.getElementById('arModelSelect').addEventListener('change',(e)=>{
+  if(arCtl.session) arCtl.setModel(e.target.value);
+});
+document.getElementById('arScale').addEventListener('input',(e)=>{
+  arCtl.userScale=parseFloat(e.target.value)/100; arCtl.applyControls();
+});
+document.getElementById('arRotate').addEventListener('input',(e)=>{
+  arCtl.userRot=parseFloat(e.target.value)*Math.PI/180; arCtl.applyControls();
+});
+document.getElementById('btnArReset').addEventListener('click',()=>{
+  arCtl.userScale=0.3; arCtl.userRot=0;
+  document.getElementById('arScale').value=30;
+  document.getElementById('arRotate').value=0;
+  arCtl.applyControls();
+});
+
+/* ============================================================
+   11. VR
+   ============================================================ */
+class VRController{
+  constructor(container){
+    this.container=container;
+    this.renderer=new THREE.WebGLRenderer({antialias:true});
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    this.renderer.xr.enabled=true;
+    this.renderer.shadowMap.enabled=true;
+    container.appendChild(this.renderer.domElement);
+    this.renderer.domElement.style.display='block';
+    this.scene=new THREE.Scene();
+    this.scene.background=new THREE.Color(0x10192b);
+    this.scene.fog=new THREE.Fog(0x10192b,8,30);
+    this.camera=new THREE.PerspectiveCamera(60,1,0.05,100);
+    this.camera.position.set(0,1.65,6);
+    this.camera.rotation.order='YXZ';
+    this.yaw=0; this.pitch=0;
+    this.buildWorkshop();
+    this.setupControls();
+    this.resize();
+    window.addEventListener('resize',()=>this.resize());
+    this.renderer.setAnimationLoop((t,f)=>this.render(t,f));
+  }
+  resize(){
+    const w=this.container.clientWidth,h=this.container.clientHeight;
+    if(!w||!h) return;
+    this.camera.aspect=w/h; this.camera.updateProjectionMatrix();
+    this.renderer.setSize(w,h,false);
+  }
+  buildWorkshop(){
+    const floor=new THREE.Mesh(
+      new THREE.PlaneGeometry(24,24),
+      new THREE.MeshStandardMaterial({color:0x24314a,roughness:0.9})
+    );
+    floor.rotation.x=-Math.PI/2; floor.receiveShadow=true;
+    this.scene.add(floor);
+    const grid=new THREE.GridHelper(24,24,0x22d3ee,0x2a3a56);
+    grid.position.y=0.01; grid.material.opacity=0.35; grid.material.transparent=true;
+    this.scene.add(grid);
+    const wallMat=new THREE.MeshStandardMaterial({color:0x1a2740,roughness:0.95,side:THREE.DoubleSide});
+    const back=new THREE.Mesh(new THREE.PlaneGeometry(24,7),wallMat);
+    back.position.set(0,3.5,-12); this.scene.add(back);
+    const left=new THREE.Mesh(new THREE.PlaneGeometry(24,7),wallMat);
+    left.position.set(-12,3.5,0); left.rotation.y=Math.PI/2; this.scene.add(left);
+    const right=new THREE.Mesh(new THREE.PlaneGeometry(24,7),wallMat);
+    right.position.set(12,3.5,0); right.rotation.y=-Math.PI/2; this.scene.add(right);
+    this.scene.add(new THREE.HemisphereLight(0xffffff,0x334155,0.85));
+    const d=new THREE.DirectionalLight(0xffffff,1.0);
+    d.position.set(6,12,6); d.castShadow=true;
+    d.shadow.mapSize.set(1024,1024);
+    d.shadow.camera.left=-15; d.shadow.camera.right=15;
+    d.shadow.camera.top=15; d.shadow.camera.bottom=-15;
+    this.scene.add(d);
+    for(const x of [-6,0,6]) for(const z of [-6,0,6]){
+      const lamp=new THREE.Mesh(
+        new THREE.BoxGeometry(1.2,0.06,0.35),
+        new THREE.MeshBasicMaterial({color:0xfff6e0})
+      );
+      lamp.position.set(x,6.5,z); this.scene.add(lamp);
+    }
+    this.stations=[];
+    const pos=[
+      {p:[-4.5,0,-5],key:'gear'},
+      {p:[0,0,-6.5],key:'belt'},
+      {p:[4.5,0,-5],key:'crank'}
+    ];
+    for(const st of pos){
+      const ped=new THREE.Mesh(
+        new THREE.BoxGeometry(2.2,0.9,2.2),
+        new THREE.MeshStandardMaterial({color:0x2c3c58,roughness:0.75})
+      );
+      ped.position.set(st.p[0],0.45,st.p[2]);
+      ped.castShadow=true; ped.receiveShadow=true;
+      this.scene.add(ped);
+      const top=new THREE.Mesh(
+        new THREE.BoxGeometry(2.35,0.05,2.35),
+        new THREE.MeshStandardMaterial({color:0x0e7490,emissive:0x0e7490,emissiveIntensity:0.4})
+      );
+      top.position.set(st.p[0],0.92,st.p[2]); this.scene.add(top);
+      const model=makeModel(st.key);
+      model.scene.position.set(st.p[0],1.45,st.p[2]);
+      model.scene.scale.setScalar(0.75);
+      this.scene.add(model.scene);
+      this.stations.push({
+        model,modelKey:st.key,
+        worldPos:new THREE.Vector3(st.p[0],1.4,st.p[2]),
+        label:MODEL_LABELS[st.key]
+      });
+    }
+  }
+  setupControls(){
+    this.keys={};
+    window.addEventListener('keydown',e=>{
+      this.keys[e.code]=true;
+      if(e.code==='KeyE') this.interact();
+    });
+    window.addEventListener('keyup',e=>{ this.keys[e.code]=false; });
+    const canvas=this.renderer.domElement;
+    let dragging=false,lastX=0,lastY=0;
+    canvas.addEventListener('mousedown',e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; });
+    window.addEventListener('mouseup',()=>{ dragging=false; });
+    window.addEventListener('mousemove',e=>{
+      if(!dragging) return;
+      this.yaw-=(e.clientX-lastX)*0.005;
+      this.pitch-=(e.clientY-lastY)*0.005;
+      this.pitch=Math.max(-Math.PI/2+0.05,Math.min(Math.PI/2-0.05,this.pitch));
+      lastX=e.clientX; lastY=e.clientY;
+    });
+    canvas.addEventListener('click',e=>{
+      const rect=canvas.getBoundingClientRect();
+      mouseVec.x=((e.clientX-rect.left)/rect.width)*2-1;
+      mouseVec.y=-((e.clientY-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(mouseVec,this.camera);
+      const allMeshes=[];
+      for(const st of this.stations) st.model.scene.traverse(o=>{ if(o.isMesh) allMeshes.push(o); });
+      const hits=raycaster.intersectObjects(allMeshes,false);
+      if(hits.length){
+        let obj=hits[0].object;
+        while(obj){
+          const st=this.stations.find(s=>s.model.scene===obj);
+          if(st){ this.showStationInfo(st); break; }
+          obj=obj.parent;
+        }
+      }
+    });
+    let touchStart=null;
+    canvas.addEventListener('touchstart',e=>{
+      if(e.touches.length===1) touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    },{passive:true});
+    canvas.addEventListener('touchmove',e=>{
+      if(e.touches.length===1 && touchStart){
+        const dx=e.touches[0].clientX-touchStart.x;
+        const dy=e.touches[0].clientY-touchStart.y;
+        this.yaw-=dx*0.005; this.pitch-=dy*0.005;
+        this.pitch=Math.max(-Math.PI/2+0.05,Math.min(Math.PI/2-0.05,this.pitch));
+        touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+      }
+    },{passive:true});
+  }
+  interact(){
+    let nearest=null,best=3;
+    for(const st of this.stations){
+      const d=this.camera.position.distanceTo(st.worldPos);
+      if(d<best){ best=d; nearest=st; }
+    }
+    if(nearest) this.showStationInfo(nearest);
+    else{
+      const p=document.querySelector('.vr-info-panel');
+      if(p) p.remove();
+    }
+  }
+  showStationInfo(st){
+    const old=document.querySelector('.vr-info-panel');
+    if(old) old.remove();
+    const info=PART_INFO[st.modelKey];
+    const el=document.createElement('div');
+    el.className='vr-info-panel';
+    el.innerHTML=`<h4>${info.title}</h4>
+      <p>Bấm E hoặc click mô hình để xem; WASD di chuyển.</p>
+      <p><strong>Bộ phận:</strong> ${Object.values(info.parts).map(p=>p.name).join(', ')}</p>
+      <button style="margin-top:8px;padding:6px 12px;background:#0e7490;color:#fff;border:none;border-radius:6px;cursor:pointer">Đóng</button>`;
+    el.querySelector('button').addEventListener('click',()=>el.remove());
+    document.querySelector('#canvasVR .vr-hud').appendChild(el);
+  }
+  render(t,frame){
+    if(this.container.clientWidth===0) return;
+    if(!frame){
+      const speed=0.09;
+      const forward=new THREE.Vector3(-Math.sin(this.yaw),0,-Math.cos(this.yaw));
+      const right=new THREE.Vector3(Math.cos(this.yaw),0,-Math.sin(this.yaw));
+      const move=new THREE.Vector3();
+      if(this.keys['KeyW']||this.keys['ArrowUp']) move.add(forward);
+      if(this.keys['KeyS']||this.keys['ArrowDown']) move.sub(forward);
+      if(this.keys['KeyD']||this.keys['ArrowRight']) move.add(right);
+      if(this.keys['KeyA']||this.keys['ArrowLeft']) move.sub(right);
+      if(move.lengthSq()>0){
+        move.normalize().multiplyScalar(speed);
+        this.camera.position.add(move);
+        this.camera.position.x=Math.max(-10,Math.min(10,this.camera.position.x));
+        this.camera.position.z=Math.max(-10,Math.min(10,this.camera.position.z));
+      }
+      this.camera.rotation.y=this.yaw;
+      this.camera.rotation.x=this.pitch;
+      this.camera.position.y=1.65;
+    }
+    const sec=t/1000;
+    for(const st of this.stations) st.model.update(sec);
+    this.renderer.render(this.scene,this.camera);
+  }
+  async enterImmersiveVR(){
+    if(!navigator.xr) return false;
+    let ok=false;
+    try{ ok=await navigator.xr.isSessionSupported('immersive-vr'); }catch(e){}
+    if(!ok) return false;
+    try{
+      const session=await navigator.xr.requestSession('immersive-vr',{
+        optionalFeatures:['local-floor','bounded-floor']
+      });
+      this.renderer.xr.setReferenceSpaceType('local-floor');
+      await this.renderer.xr.setSession(session);
+      return true;
+    }catch(e){ console.warn('VR error',e); return false; }
+  }
+}
+const vrCtl=new VRController(document.getElementById('canvasVR'));
+window.vrCtl=vrCtl;
+
+const vrList=document.getElementById('vrModelList');
+Object.entries(MODEL_LABELS).forEach(([key,label])=>{
+  const b=document.createElement('button');
+  b.textContent=label;
+  b.addEventListener('click',()=>{
+    const st=vrCtl.stations.find(s=>s.modelKey===key);
+    if(st){
+      vrCtl.camera.position.set(st.worldPos.x,1.65,st.worldPos.z+3);
+      vrCtl.yaw=0; vrCtl.pitch=0;
+      vrCtl.showStationInfo(st);
+    }
+  });
+  vrList.appendChild(b);
+});
+
+document.getElementById('btnVRImmersive').addEventListener('click',async()=>{
+  const btn=document.getElementById('btnVRImmersive');
+  const ok=await vrCtl.enterImmersiveVR();
+  if(ok){
+    const n=document.getElementById('vrNotice');
+    n.textContent='Chế độ VR nhập vai đang hoạt động.';
+    n.style.color='#22c55e'; n.style.background='rgba(34,197,94,.1)';
+    btn.classList.add('active');
+    document.getElementById('btnVR3D').classList.remove('active');
+  }else{
+    alert('Không thể vào chế độ VR nhập vai trên thiết bị này.\nBạn có thể dùng chế độ "3D khám phá".\nXem "Hướng dẫn" để biết yêu cầu thiết bị.');
+  }
+});
+document.getElementById('btnVR3D').addEventListener('click',function(){
+  this.classList.add('active');
+  document.getElementById('btnVRImmersive').classList.remove('active');
+  const n=document.getElementById('vrNotice');
+  n.textContent='Đây là không gian 3D khám phá bằng chuột/bàn phím — không phải VR nhập vai hoàn chỉnh.';
+  n.style.color=''; n.style.background='';
+});
+
+/* ============================================================
+   12. LEARN
+   ============================================================ */
+const learnScene=new ThreeScene(document.getElementById('canvasLearn'),[3,2,4]);
+learnScene.start();
+window.learnScene=learnScene;
+const learnModels={gear:makeModel('gear'),belt:makeModel('belt'),crank:makeModel('crank')};
+
+const LEARN_DATA={
+  1:{
+    title:'Trạm 1 – Quan sát và nhận diện bộ phận',
+    instructions:'Chọn tên bộ phận bên phải, sau đó chạm vào bộ phận tương ứng trên mô hình.',
+    model:'gear',
+    tasks:[
+      {partId:'gearA',name:'Bánh răng chủ động'},
+      {partId:'gearB',name:'Bánh răng bị động'},
+      {partId:'shaftA',name:'Trục chủ động'},
+      {partId:'shaftB',name:'Trục bị động'}
+    ]
+  },
+  2:{
+    title:'Trạm 2 – Khám phá nguyên lí',
+    instructions:'Quan sát mô hình chuyển động và trả lời các câu hỏi.',
+    model:'gear',
+    questions:[
+      {q:'Khi hai bánh răng ăn khớp, hai bánh quay cùng chiều hay ngược chiều?',
+        options:['Cùng chiều','Ngược chiều','Không xác định'],correct:1,
+        explain:'Hai bánh răng ăn khớp luôn quay ngược chiều nhau.'},
+      {q:'Bánh chủ động có 16 răng, bánh bị động có 24 răng. Tỉ số truyền i = z₂/z₁ bằng bao nhiêu?',
+        options:['2/3','3/2','1/2','1'],correct:1,
+        explain:'i = z₂/z₁ = 24/16 = 1,5. Bánh bị động quay chậm hơn nhưng mô-men lớn hơn.'},
+      {q:'Nếu bánh chủ động quay 3 vòng thì bánh bị động quay bao nhiêu vòng?',
+        options:['2 vòng','3 vòng','4,5 vòng','1,5 vòng'],correct:0,
+        explain:'n₂ = n₁ / i = 3 / 1,5 = 2 vòng.'}
+    ]
+  },
+  3:{
+    title:'Trạm 3 – Vận dụng',
+    instructions:'Đọc tình huống và chọn cơ cấu phù hợp nhất.',
+    model:'belt',
+    scenarios:[
+      {q:'Cần truyền chuyển động quay giữa hai trục song song, đặt xa nhau, cho phép trượt khi quá tải (an toàn).',
+        options:[
+          {label:'Bộ truyền bánh răng',correct:false,
+            explain:'Bánh răng truyền động cứng, không trượt — không an toàn khi quá tải.'},
+          {label:'Bộ truyền đai',correct:true,
+            explain:'Đai truyền được xa và có thể trượt khi quá tải, giúp bảo vệ thiết bị.'},
+          {label:'Cơ cấu tay quay – con trượt',correct:false,
+            explain:'Cơ cấu này biến chuyển động quay thành tịnh tiến, không dùng để truyền giữa hai trục song song.'}
+        ]},
+      {q:'Cần biến chuyển động quay thành chuyển động tịnh tiến (ví dụ: máy bơm piston).',
+        options:[
+          {label:'Bộ truyền bánh răng',correct:false,
+            explain:'Bánh răng chỉ truyền chuyển động quay, không tạo tịnh tiến.'},
+          {label:'Bộ truyền đai',correct:false,
+            explain:'Bộ truyền đai cũng chỉ truyền chuyển động quay.'},
+          {label:'Cơ cấu tay quay – con trượt',correct:true,
+            explain:'Đây chính là cơ cấu biến chuyển động quay thành tịnh tiến.'}
+        ]}
+    ]
+  }
+};
+
+let learnStep=1;
+const learnState={
+  1:{matched:new Set(),selected:null},
+  2:{answers:{}},
+  3:{answers:{}}
+};
+
+// Khôi phục
+if(saved){
+  learnStep=saved.learnStep||1;
+  if(Array.isArray(saved.matched1)) learnState[1].matched=new Set(saved.matched1);
+  if(saved.answers2) learnState[2].answers=saved.answers2;
+  if(saved.answers3) learnState[3].answers=saved.answers3;
+}
+
+function updateStepper(){
+  document.querySelectorAll('.step').forEach(el=>{
+    const s=parseInt(el.dataset.step);
+    el.classList.toggle('active',s===learnStep);
+    el.classList.toggle('done',s<learnStep);
+  });
+  document.getElementById('btnLearnBack').disabled=learnStep===1;
+  document.getElementById('btnLearnNext').disabled=true;
+  document.getElementById('btnLearnNext').textContent=learnStep===3?'Hoàn thành':'Tiếp tục →';
+}
+
+function renderLearnStation(){
+  updateStepper();
+  const data=LEARN_DATA[learnStep];
+  learnScene.setModel(learnModels[data.model]);
+  const panel=document.getElementById('learnPanel');
+  if(learnStep===1) renderStation1(panel,data);
+  else if(learnStep===2) renderStation2(panel,data);
+  else renderStation3(panel,data);
+}
+
+function renderStation1(panel,data){
+  panel.innerHTML=`
+    <h3>${data.title}</h3>
+    <p class="instructions">${data.instructions}</p>
+    <div class="label-list" id="labelList">
+      ${data.tasks.map(t=>`<button class="label-btn" data-part="${t.partId}">${t.name}</button>`).join('')}
+    </div>
+    <div class="progress">Đã nhận diện: <span id="matchProgress">${learnState[1].matched.size}</span>/${data.tasks.length}</div>`;
+  panel.querySelectorAll('.label-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(btn.classList.contains('matched')) return;
+      panel.querySelectorAll('.label-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      learnState[1].selected=btn.dataset.part;
+    });
+  });
+  learnState[1].matched.forEach(pid=>{
+    const b=panel.querySelector(`.label-btn[data-part="${pid}"]`);
+    if(b){ b.classList.add('matched'); b.textContent='✓ '+b.textContent.replace('✓ ',''); }
+  });
+  checkStation1();
+}
+function checkStation1(){
+  const data=LEARN_DATA[1];
+  const ok=learnState[1].matched.size===data.tasks.length;
+  document.getElementById('btnLearnNext').disabled=!ok;
+  if(ok) saveProgress();
+}
+
+learnScene.renderer.domElement.addEventListener('click',(e)=>{
+  if(learnStep!==1) return;
+  const id=pickPart(e,learnScene);
+  if(!id) return;
+  const sel=learnState[1].selected;
+  if(!sel) return;
+  if(sel===id){
+    learnState[1].matched.add(id);
+    learnState[1].selected=null;
+    document.querySelectorAll('#labelList .label-btn').forEach(b=>b.classList.remove('selected'));
+    const b=document.querySelector(`#labelList .label-btn[data-part="${id}"]`);
+    if(b){ b.classList.add('matched'); b.textContent='✓ '+b.textContent.replace('✓ ',''); }
+    document.getElementById('matchProgress').textContent=learnState[1].matched.size;
+    checkStation1();
+    saveProgress();
+  }else{
+    const b=document.querySelector(`#labelList .label-btn[data-part="${sel}"]`);
+    if(b){
+      b.style.transition='transform .15s';
+      b.style.transform='translateX(-4px)';
+      setTimeout(()=>b.style.transform='',150);
+    }
+  }
+});
+
+function renderStation2(panel,data){
+  panel.innerHTML=`
+    <h3>${data.title}</h3>
+    <p class="instructions">${data.instructions}</p>
+    <div id="quizList">
+      ${data.questions.map((q,i)=>`
+        <div class="quiz-item" data-i="${i}" style="margin-bottom:18px">
+          <div style="font-weight:600;margin-bottom:8px">Câu ${i+1}: ${q.q}</div>
+          ${q.options.map((opt,j)=>`
+            <button class="quiz-option" data-i="${i}" data-j="${j}">${opt}</button>
+          `).join('')}
+          <div class="feedback-slot"></div>
+        </div>`).join('')}
+    </div>`;
+  panel.querySelectorAll('.quiz-option').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.i), j=parseInt(btn.dataset.j);
+      const q=data.questions[i];
+      const item=panel.querySelector(`.quiz-item[data-i="${i}"]`);
+      if(j===q.correct){
+        btn.classList.add('correct');
+        item.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);
+        item.querySelector('.feedback-slot').innerHTML=`<div class="feedback">${q.explain}</div>`;
+        learnState[2].answers[i]=true;
+        checkStation2(); saveProgress();
+      }else{
+        btn.classList.add('wrong');
+        item.querySelector('.feedback-slot').innerHTML=`<div class="feedback wrong">Chưa đúng. Hãy quan sát lại mô hình.</div>`;
+      }
+    });
+  });
+  data.questions.forEach((q,i)=>{
+    if(learnState[2].answers[i]===true){
+      const item=panel.querySelector(`.quiz-item[data-i="${i}"]`);
+      const correctBtn=item.querySelector(`.quiz-option[data-j="${q.correct}"]`);
+      correctBtn.classList.add('correct');
+      item.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);
+      item.querySelector('.feedback-slot').innerHTML=`<div class="feedback">${q.explain}</div>`;
+    }
+  });
+  checkStation2();
+}
+function checkStation2(){
+  const total=LEARN_DATA[2].questions.length;
+  const done=Object.values(learnState[2].answers).filter(Boolean).length;
+  document.getElementById('btnLearnNext').disabled=done<total;
+}
+
+function renderStation3(panel,data){
+  panel.innerHTML=`
+    <h3>${data.title}</h3>
+    <p class="instructions">${data.instructions}</p>
+    <div id="scenarioList">
+      ${data.scenarios.map((s,i)=>`
+        <div class="quiz-item" data-i="${i}" style="margin-bottom:18px">
+          <div style="font-weight:600;margin-bottom:8px">Tình huống ${i+1}: ${s.q}</div>
+          ${s.options.map((opt,j)=>`
+            <button class="quiz-option" data-i="${i}" data-j="${j}">${opt.label}</button>
+          `).join('')}
+          <div class="feedback-slot"></div>
+        </div>`).join('')}
+    </div>`;
+  panel.querySelectorAll('.quiz-option').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=parseInt(btn.dataset.i), j=parseInt(btn.dataset.j);
+      const s=data.scenarios[i], opt=s.options[j];
+      const item=panel.querySelector(`.quiz-item[data-i="${i}"]`);
+      if(opt.correct){
+        btn.classList.add('correct');
+        item.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);
+        item.querySelector('.feedback-slot').innerHTML=`<div class="feedback">${opt.explain}</div>`;
+        learnState[3].answers[i]=true;
+        checkStation3(); saveProgress();
+      }else{
+        btn.classList.add('wrong');
+        item.querySelector('.feedback-slot').innerHTML=`<div class="feedback wrong">${opt.explain||'Chưa phù hợp.'}</div>`;
+      }
+    });
+  });
+  data.scenarios.forEach((s,i)=>{
+    if(learnState[3].answers[i]===true){
+      const item=panel.querySelector(`.quiz-item[data-i="${i}"]`);
+      const correctJ=s.options.findIndex(o=>o.correct);
+      const correctBtn=item.querySelector(`.quiz-option[data-j="${correctJ}"]`);
+      correctBtn.classList.add('correct');
+      item.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);
+      item.querySelector('.feedback-slot').innerHTML=`<div class="feedback">${s.options[correctJ].explain}</div>`;
+    }
+  });
+  checkStation3();
+}
+function checkStation3(){
+  const total=LEARN_DATA[3].scenarios.length;
+  const done=Object.values(learnState[3].answers).filter(Boolean).length;
+  document.getElementById('btnLearnNext').disabled=done<total;
+}
+
+document.getElementById('btnLearnBack').addEventListener('click',()=>{
+  if(learnStep>1){ learnStep--; renderLearnStation(); saveProgress(); }
+});
+document.getElementById('btnLearnNext').addEventListener('click',()=>{
+  if(learnStep<3){
+    learnStep++; renderLearnStation(); saveProgress();
+  }else{
+    const panel=document.getElementById('learnPanel');
+    panel.innerHTML=`
+      <h3>🎉 Hoàn thành không gian học tập</h3>
+      <p class="instructions">Bạn đã hoàn thành cả 3 trạm.</p>
+      <div class="feedback">Trạm 1: Đã nhận diện đủ ${LEARN_DATA[1].tasks.length} bộ phận.</div>
+      <div class="feedback" style="margin-top:8px">Trạm 2: Đã trả lời đúng ${Object.values(learnState[2].answers).filter(Boolean).length}/${LEARN_DATA[2].questions.length} câu.</div>
+      <div class="feedback" style="margin-top:8px">Trạm 3: Đã giải quyết ${Object.values(learnState[3].answers).filter(Boolean).length}/${LEARN_DATA[3].scenarios.length} tình huống.</div>
+      <button id="btnRestart" style="margin-top:16px;padding:10px 16px;background:#0e7490;color:#fff;border:none;border-radius:8px;cursor:pointer">Làm lại từ đầu</button>`;
+    panel.querySelector('#btnRestart').addEventListener('click',resetLearn);
+    document.getElementById('btnLearnNext').disabled=true;
+  }
+});
+
+function resetLearn(){
+  learnStep=1;
+  learnState[1]={matched:new Set(),selected:null};
+  learnState[2]={answers:{}};
+  learnState[3]={answers:{}};
+  clearProgress();
+  renderLearnStation();
+}
+document.getElementById('btnResetLearn').addEventListener('click',()=>{
+  if(!confirm('Xoá toàn bộ tiến độ học tập và bắt đầu lại?')) return;
+  resetLearn();
+});
+
+renderLearnStation();
+
+document.querySelector('.main-nav button[data-view="learn"]').addEventListener('click',()=>{
+  setTimeout(()=>learnScene.resize(),60);
+});
+
+/* ============================================================
+   13. HELP MODAL
+   ============================================================ */
+function openHelp(){ document.getElementById('helpModal').classList.remove('hidden'); }
+function closeHelp(){ document.getElementById('helpModal').classList.add('hidden'); }
+document.getElementById('btnHelp').addEventListener('click',openHelp);
+document.getElementById('btnCloseHelp').addEventListener('click',closeHelp);
+document.getElementById('helpModal').addEventListener('click',(e)=>{
+  if(e.target.id==='helpModal') closeHelp();
+});
+
+console.log('Xưởng Cơ khí số – khởi tạo xong. Xem nút "Hướng dẫn" để biết giới hạn kỹ thuật.');
+</script>
+</body>
+</html>
